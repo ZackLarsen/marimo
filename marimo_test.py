@@ -16,6 +16,12 @@ def __(mo):
     return
 
 
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md("""## Data Tabs""")
+    return
+
+
 @app.cell
 def __(cars, mo):
     mo.ui.tabs({
@@ -32,15 +38,35 @@ def __():
 
 @app.cell(hide_code=True)
 def __(mo):
-    mo.md("""## Plots""")
+    mo.md("""## Plot Tabs""")
     return
 
 
 @app.cell
+def __(
+    bar,
+    car_violin_chart,
+    iris_chart,
+    mo,
+    population_chart,
+    ridgeline_plot,
+    rule,
+):
+    mo.ui.tabs({
+        "population": population_chart,
+        "bar and rule": bar + rule,
+        "iris": iris_chart,
+        "violin": car_violin_chart,
+        "ridgeline": ridgeline_plot
+    })
+    return
+
+
+@app.cell(hide_code=True)
 def __(alt, vega_datasets):
     population = vega_datasets.data.population.url
 
-    (
+    population_chart = (
         alt.Chart(population)
         .mark_boxplot(extent='min-max')
         .encode(
@@ -48,10 +74,10 @@ def __(alt, vega_datasets):
             y='people:Q'
         )
     )
-    return (population,)
+    return population, population_chart
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(alt, vega_datasets):
     movies = vega_datasets.data.movies.url
 
@@ -66,114 +92,113 @@ def __(alt, vega_datasets):
         x='mean(IMDB_Rating):Q',
         size=alt.value(5)
     )
-
-    bar + rule
     return bar, base, movies, rule
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(alt, vega_datasets):
     iris = vega_datasets.data.iris()
 
-    alt.Chart(iris).transform_fold(
-        [
-            "petalWidth",
-            "petalLength",
-            "sepalWidth",
-            "sepalLength",
-        ],
-        as_=["Measurement_type", "value"],
-    ).transform_density(
-        density="value",
-        bandwidth=0.3,
-        groupby=["Measurement_type"],
-        extent=[0, 8],
-    ).mark_area().encode(
-        alt.X("value:Q"),
-        alt.Y("density:Q"),
-        alt.Row("Measurement_type:N"),
-    ).properties(
-        width=300, height=50
+    iris_chart = (
+        alt.Chart(iris).transform_fold(
+            [
+                "petalWidth",
+                "petalLength",
+                "sepalWidth",
+                "sepalLength",
+            ],
+            as_=["Measurement_type", "value"],
+        ).transform_density(
+            density="value",
+            bandwidth=0.3,
+            groupby=["Measurement_type"],
+            extent=[0, 8],
+        ).mark_area().encode(
+            alt.X("value:Q"),
+            alt.Y("density:Q"),
+            alt.Row("Measurement_type:N"),
+        ).properties(
+            width=300, height=50
+        )
     )
-    return (iris,)
+    return iris, iris_chart
 
 
-@app.cell
-def __():
-    return
-
-
-@app.cell
+@app.cell(hide_code=True)
 def __(alt, vega_datasets):
-    alt.Chart(vega_datasets.data.cars(), width=100).transform_density(
-        'Miles_per_Gallon',
-        as_=['Miles_per_Gallon', 'density'],
-        extent=[5, 50],
-        groupby=['Origin']
-    ).mark_area(orient='horizontal').encode(
-        alt.X('density:Q')
-            .stack('center')
-            .impute(None)
-            .title(None)
-            .axis(labels=False, values=[0], grid=False, ticks=True),
-        alt.Y('Miles_per_Gallon:Q'),
-        alt.Color('Origin:N'),
-        alt.Column('Origin:N')
-            .spacing(0)
-            .header(titleOrient='bottom', labelOrient='bottom', labelPadding=0)
-    ).configure_view(
-        stroke=None
+    car_violin_chart = (
+        alt.Chart(vega_datasets.data.cars(), width=100).transform_density(
+            'Miles_per_Gallon',
+            as_=['Miles_per_Gallon', 'density'],
+            extent=[5, 50],
+            groupby=['Origin']
+        ).mark_area(orient='horizontal').encode(
+            alt.X('density:Q')
+                .stack('center')
+                .impute(None)
+                .title(None)
+                .axis(labels=False, values=[0], grid=False, ticks=True),
+            alt.Y('Miles_per_Gallon:Q'),
+            alt.Color('Origin:N'),
+            alt.Column('Origin:N')
+                .spacing(0)
+                .header(titleOrient='bottom', labelOrient='bottom', labelPadding=0)
+        ).configure_view(
+            stroke=None
+        )
     )
-    return
+    return (car_violin_chart,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(alt, vega_datasets):
     seattle_weather = vega_datasets.data.seattle_weather.url
 
     step = 20
     overlap = 1
 
-    alt.Chart(seattle_weather, height=step).transform_timeunit(
-        Month='month(date)'
-    ).transform_joinaggregate(
-        mean_temp='mean(temp_max)', groupby=['Month']
-    ).transform_bin(
-        ['bin_max', 'bin_min'], 'temp_max'
-    ).transform_aggregate(
-        value='count()', groupby=['Month', 'mean_temp', 'bin_min', 'bin_max']
-    ).transform_impute(
-        impute='value', groupby=['Month', 'mean_temp'], key='bin_min', value=0
-    ).mark_area(
-        interpolate='monotone',
-        fillOpacity=0.8,
-        stroke='lightgray',
-        strokeWidth=0.5
-    ).encode(
-        alt.X('bin_min:Q')
-            .bin('binned')
-            .title('Maximum Daily Temperature (C)'),
-        alt.Y('value:Q')
-            .axis(None)
-            .scale(range=[step, -step * overlap]),
-        alt.Fill('mean_temp:Q')
-            .legend(None)
-            .scale(domain=[30, 5], scheme='redyellowblue')
-    ).facet(
-        row=alt.Row('Month:T')
-            .title(None)
-            .header(labelAngle=0, labelAlign='left', format='%B')
-    ).properties(
-        title='Seattle Weather',
-        bounds='flush'
-    ).configure_facet(
-        spacing=0
-    ).configure_view(
-        stroke=None
-    ).configure_title(
-        anchor='end'
+    ridgeline_plot = (
+        alt.Chart(seattle_weather, height=step).transform_timeunit(
+            Month='month(date)'
+        ).transform_joinaggregate(
+            mean_temp='mean(temp_max)', groupby=['Month']
+        ).transform_bin(
+            ['bin_max', 'bin_min'], 'temp_max'
+        ).transform_aggregate(
+            value='count()', groupby=['Month', 'mean_temp', 'bin_min', 'bin_max']
+        ).transform_impute(
+            impute='value', groupby=['Month', 'mean_temp'], key='bin_min', value=0
+        ).mark_area(
+            interpolate='monotone',
+            fillOpacity=0.8,
+            stroke='lightgray',
+            strokeWidth=0.5
+        ).encode(
+            alt.X('bin_min:Q')
+                .bin('binned')
+                .title('Maximum Daily Temperature (C)'),
+            alt.Y('value:Q')
+                .axis(None)
+                .scale(range=[step, -step * overlap]),
+            alt.Fill('mean_temp:Q')
+                .legend(None)
+                .scale(domain=[30, 5], scheme='redyellowblue')
+        ).facet(
+            row=alt.Row('Month:T')
+                .title(None)
+                .header(labelAngle=0, labelAlign='left', format='%B')
+        ).properties(
+            title='Seattle Weather',
+            bounds='flush'
+        ).configure_facet(
+            spacing=0
+        ).configure_view(
+            stroke=None
+        ).configure_title(
+            anchor='end'
+        )
     )
-    return overlap, seattle_weather, step
+    return overlap, ridgeline_plot, seattle_weather, step
 
 
 @app.cell
@@ -186,8 +211,9 @@ def __():
     return
 
 
-@app.cell
-def __():
+@app.cell(hide_code=True)
+def __(mo):
+    mo.md("""## Interactive charts""")
     return
 
 
@@ -294,22 +320,6 @@ def __(mo):
 
 
 @app.cell
-def __(pl):
-    random_numbers_df = pl.DataFrame(
-        {
-            "i": range(1, 5),
-            "lines": [
-                "20 23 6 7 37 23 21 4 7 16",
-                "2.3 6.8 9.2 2.42 3.5 12.1 5.3 3.6 7.2 3.74",
-                "-12 -5 6 3.7 0 8 -7.4",
-                "2 0 15 7 8 10 1 24 17 13 6",
-            ]
-        }
-        ).with_columns(bars=pl.col("lines"))
-    return (random_numbers_df,)
-
-
-@app.cell
 def __(GT, mo, random_numbers_df):
     gtable = (
         GT(random_numbers_df, rowname_col="i")
@@ -345,7 +355,7 @@ def __(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __():
     diagram = '''
     graph TD
@@ -354,14 +364,9 @@ def __():
     return (diagram,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(diagram, mo):
     mo.mermaid(diagram)
-    return
-
-
-@app.cell
-def __():
     return
 
 
@@ -442,13 +447,18 @@ def __():
     return
 
 
+@app.cell
+def __():
+    return
+
+
 @app.cell(hide_code=True)
 def __(mo):
     mo.md("""## Data""")
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def __(pl, sza, vega_datasets):
     cars = pl.DataFrame(vega_datasets.data.cars())
 
@@ -459,7 +469,19 @@ def __(pl, sza, vega_datasets):
         .drop_nulls()
         .pivot(values="sza", index="month", on="tst", sort_columns=True)
     )
-    return cars, sza_pivot
+
+    random_numbers_df = pl.DataFrame(
+        {
+            "i": range(1, 5),
+            "lines": [
+                "20 23 6 7 37 23 21 4 7 16",
+                "2.3 6.8 9.2 2.42 3.5 12.1 5.3 3.6 7.2 3.74",
+                "-12 -5 6 3.7 0 8 -7.4",
+                "2 0 15 7 8 10 1 24 17 13 6",
+            ]
+        }
+        ).with_columns(bars=pl.col("lines"))
+    return cars, random_numbers_df, sza_pivot
 
 
 @app.cell(hide_code=True)
