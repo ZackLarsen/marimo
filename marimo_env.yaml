@@ -1,0 +1,21 @@
+name: marimo_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - marimo[sql]>=0.9.14
+    - polars==1.0.0
+    - polars-cli
+    - pyarrow
+    - duckdb
+    - vega
+    - vega_datasets
+    - altair
+    - skimpy
+    - missingno
+    - summarytools
+    - sidetable
+    - great_tables
